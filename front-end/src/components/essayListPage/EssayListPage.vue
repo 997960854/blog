@@ -1,30 +1,28 @@
 <template>
-    <main id="EssayListPage" v-if="essayList.length !== 0">
+    <main id="EssayListPage" v-if="essay !== null && essay.list.length !== 0">
         <article class="essay-list-bar">
-            <essay-list v-for="essayListItem of essayList" :key="essayListItem.id" v-bind="addTagName(essayListItem)"></essay-list>
+            <essay-list v-for="essayListItem of essay.list" :key="essayListItem.id" v-bind="essayListItem"></essay-list>
         </article>
-        <nav-bar :page="page" v-bind="this.showBtn"></nav-bar>
+        <nav class="nav ptr">
+            <router-link :class="{hide: page === 1}" :to='{name: "page", params: {page: page - 1}}' tag="span">« 上一页</router-link>
+            <router-link to="/" tag="span">博客归档</router-link>
+            <router-link :class="{hide: ((page - 1) * pageSize + essay.list.length) === essay.totalCount}" :to='{name: "page", params: {page: page + 1}}' tag="span">下一页 »</router-link>
+        </nav>
     </main>
     <div v-else class="nothing">Nothing</div>
 </template>
 
 <script>
 import EssayList from "./EssayList";
-import Nav from "./Nav";
 
 export default {
     components: {
-        EssayList,
-        NavBar: Nav
+        EssayList
     },
     data(){
         return {
             pageSize: 10,
-            essayList: [],
-            showBtn: {
-                next: true,
-                prev: true,
-            }
+            essay: null
         }
     },
     computed: {
@@ -36,17 +34,14 @@ export default {
         async updateEssayList(pageSize, page){
             let {data: {code, msg, data}} = await this.axios.post(this.apiUrl + "/getEssayList", {pageSize, page});
             if(code == 200){
-                this.essayList = data;
-                this.essayList.length < this.pageSize ? (this.showBtn.next = false) : (this.showBtn.next = true);
-                this.page === 1 ? (this.showBtn.prev = false) : (this.showBtn.prev = true);
+                this.essay = data;
             }
             if(code == 404){    
-                this.essayList = [];
+                this.essay = {
+                    list: [],
+                    totalCount: 0
+                };
             }
-        },
-        addTagName(essayListItem){
-            essayListItem.tagName = "all";
-            return essayListItem;
         }
     },
     created(){
@@ -73,6 +68,18 @@ export default {
     flex-direction: column;
     .essay-list-bar{
         flex-grow: 1;
+    }
+    .nav{
+        color: #2479CC;
+        display: flex;
+        justify-content: space-between;
+        padding: 0.2rem;
+        border-bottom: 1px solid #ddd;
+        span{
+            &.hide{
+                visibility: hidden;
+            }
+        }
     }
 }
 </style>

@@ -32,12 +32,17 @@ let routes = [
   {path: "/", component: Main, children: [
     {path: "page/:page", name: "page", component: () => import("./components/essayListPage/EssayListPage.vue")},
     {path: "index", alias: "/", redirect: "/page/1"},
-    {path: "essay/:tagName/:id", name: "essay", component: () => import("./components/essayDetailPage/EssayDetailPage.vue")},
+    {path: "essay/:id", name: "essay", component: () => import("./components/essayDetailPage/EssayDetailPage.vue")},
     {path: "archives", component: () => import("./components/essayArchives/EssayArchives.vue")},
     {path: "tags", component: () => import("./components/essayTags/EssayTags.vue")},
-    {path: "tag/:tagName/:page", name: "tag", component: () => import("./components/essayTagDetailPage/EssayTagDetailPage.vue")},
+    {path: "tag/:tagName/:page", name: "tag", component: () => import("./components/essayTagListPage/EssayTagListPage.vue")},
+    {path: "essayTag/:tagName/:id", name: "essayTag", component: () => import("./components/essayTagDetailPage/EssayTagDetailPage.vue")},
     {path: "friendlyLink", component: () => import("./components/friendlyLinkPage/FriendlyLinkPage.vue")},
     {path: "aboutMe", component: () => import("./components/aboutMePage/AboutMePage.vue")},
+    {path: "search", component: () => import("./components/searchPage/SearchPage.vue"), children: [
+      {path: "/search/:keywords/page/:page", name: "search", component: () => import("./components/searchPage/searchListPage/SearchListPage.vue")}
+    ]},
+    {path: "searchEssay/:keywords/:id", name: "searchEssay", component: () => import("./components/searchDetailPage/SearchDetailPage.vue")}
   ]},
   {path: "*", component: () => import("./components/Error.vue")}
 ];

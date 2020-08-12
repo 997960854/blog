@@ -2,10 +2,11 @@
     <article id="EssayArchives" v-if="archivesInfo.length !== 0">
         <h1>归档</h1>
         <div v-for="(it, id) of archivesInfo" :key="id">
-            <h1>{{it.time}}({{it.content.length}})</h1>
+            <h1>{{it.time| titleTimeFormat}}({{it.content.length}})</h1>
             <ul>
                 <li v-for="it of it.content" :key="it.id">
                     <router-link :to='{name: "essay", params: {id: it.id}}'  tag="span">{{it.title}}</router-link>
+                    <span>{{it.updateTime| tagTimeFormat}}</span>
                 </li>
             </ul>
         </div>
@@ -33,6 +34,19 @@ export default {
     },
     created(){
         this.updateArchives();
+    },
+    filters: {
+        titleTimeFormat(time){
+            let year = new Date(time).getFullYear();
+            let month = new Date(time).getMonth() + 1;
+            return `${year}年${month}月`;
+        },
+        tagTimeFormat(time){
+            let year = new Date(time).getFullYear();
+            let month = new Date(time).getMonth() + 1;
+            let date = new Date(time).getDate();
+            return `${year}-${month < 10 ? "0" + month : month}-${date < 10 ? "0" + date : date}`;
+        }
     }
 }
 </script>
@@ -60,7 +74,14 @@ export default {
                 margin: 0.15rem 0.3rem;
                 span{
                     color: #2479CC;
-                    cursor: pointer;
+                    &:first-child{
+                        cursor: pointer;
+                    }
+                    &:last-child{
+                        color: #999;
+                        font: italic 500 0.13rem/1 "微软雅黑";
+                        margin-left: 0.1rem;
+                    }
                 }
             }
         }

@@ -35,9 +35,6 @@ export default {
     computed: {
         id(){
             return this.$route.params.id * 1;
-        },
-        tagName(){
-            return this.$route.params.tagName
         }
     },
     data(){
@@ -51,7 +48,7 @@ export default {
     },
     methods: {
         async updateEssay(){
-            let {data: {code, msg, data}} = await this.axios.post(this.apiUrl + "/getEssayInfo", {id: this.id, tagName: this.tagName});
+            let {data: {code, msg, data}} = await this.axios.post(this.apiUrl + "/getEssayInfo", {id: this.id});
             if(code == 200){
                 [this.navBtn.prev, this.essay, this.navBtn.next] = data;
                 this.updateViewCount();

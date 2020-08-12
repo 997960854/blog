@@ -10,11 +10,14 @@
                 <span>{{name}}</span>
             </router-link>
         </ul>
-        <ul class="other-link-group ptr">
-            <router-link :to="path" :title="title" tag="a" v-for="({iconClass, path, title}, id) of otherLinks" :key="id">
+        <div class="other-link-group ptr">
+            <a :href="path" :title="title" tag="a" v-for="({iconClass, path, title}, id) of otherLinks.outside" :key="id">
+                <i class="iconfont" :class="iconClass"></i>
+            </a>
+            <router-link :to="path" :title="title" tag="a" v-for="({iconClass, path, title}, id) of otherLinks.inside" :key="id">
                 <i class="iconfont" :class="iconClass"></i>
             </router-link>
-        </ul>
+        </div>
     </nav>
 </template>
 
@@ -32,10 +35,10 @@ export default {
                 {iconClass: "icon-guanyuwomen", name: "关于", path: "/aboutMe", title: "关于"},
                 {iconClass: "icon-youqinglianjie", name: "友链", path: "/friendlyLink", title: "友链"},
             ],
-            otherLinks: [
-                {iconClass: "icon-github", path: "/", title: "首页"},
-                {iconClass: "icon-chazhao", path: "/", title: "查找"}
-            ]
+            otherLinks: {
+                outside: [{iconClass: "icon-github", path: "http://www.baidu.com", title: "首页"}],
+                inside: [{iconClass: "icon-chazhao", path: "/search", title: "搜索文章"}]
+            },
         }
     },
     methods: {

@@ -1,5 +1,5 @@
 <template>
-    <main id="EssayTagDetailPage" v-if="essay">
+    <main id="SearchDetailPage" v-if="essay">
         <article>
             <div class="title">
                 <h1>{{essay.title}}</h1>
@@ -20,10 +20,10 @@
         </article>
         <nav v-if="navBtn.prev !== null || navBtn.next !== null">
             <div>
-                <router-link :class="{hide: (navBtn.prev === null)}" :to='navBtn.prev === null ? "" : {name: "essay", params: {id: navBtn.prev.id}}' tag="span">« {{navBtn.prev === null ? "" : navBtn.prev.title}}</router-link>
+                <router-link :class="{hide: (navBtn.prev === null)}" :to='navBtn.prev === null ? "" : {name: "searchEssay", params: {id: navBtn.prev.id, keywords}}' tag="span">« {{navBtn.prev === null ? "" : navBtn.prev.title}}</router-link>
             </div>
             <div>
-                <router-link :class="{hide: (navBtn.next=== null)}" :to='navBtn.next === null ? "" : {name: "essay", params: {id: navBtn.next.id}}' tag="span">{{navBtn.next === null ? "" : navBtn.next.title }} »</router-link>
+                <router-link :class="{hide: (navBtn.next=== null)}" :to='navBtn.next === null ? "" : {name: "searchEssay", params: {id: navBtn.next.id, keywords}}' tag="span">{{navBtn.next === null ? "" : navBtn.next.title }} »</router-link>
             </div>
         </nav>
     </main>
@@ -36,8 +36,8 @@ export default {
         id(){
             return this.$route.params.id * 1;
         },
-        tagName(){
-            return this.$route.params.tagName;
+        keywords(){
+            return this.$route.params.keywords;
         }
     },
     data(){
@@ -50,8 +50,8 @@ export default {
         }
     },
     methods: {
-        async updateEssay(){
-            let {data: {code, msg, data}} = await this.axios.post(this.apiUrl + "/getEssayTagInfo", {id: this.id, tagName: this.tagName});
+        async updateSearchEssay(){
+            let {data: {code, msg, data}} = await this.axios.post(this.apiUrl + "/getSearchEssayInfo", {id: this.id, keywords: this.keywords});
             if(code == 200){
                 [this.navBtn.prev, this.essay, this.navBtn.next] = data;
                 this.updateViewCount();
@@ -68,14 +68,14 @@ export default {
         }
     },
     created(){
-        this.updateEssay();
+        this.updateSearchEssay();
     },
     watch: {
         id(id){
-            this.updateEssay();
+            this.updateSearchEssay();
         },
-        tagName(tagName){
-            this.updateEssay();
+        keywords(keywords){
+            this.updateSearchEssay();
         }
     }
 }
@@ -89,7 +89,7 @@ export default {
     color: #999;
     font: 300 0.32rem/1 "微软雅黑";
 }
-#EssayTagDetailPage{
+#SearchDetailPage{
     article{
         padding: 0.3rem 0;
         border-bottom: 1px solid #ddd;

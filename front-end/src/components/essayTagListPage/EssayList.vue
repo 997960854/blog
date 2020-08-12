@@ -1,7 +1,7 @@
 <template>
     <article id="EssayList">
         <div class="title">
-            <router-link :to='{name: "essay", params: { id }}' tag="h1">{{title}}</router-link>
+            <router-link :to='{name: "essayTag", params: { id, tagName }}' tag="h1">{{title}}</router-link>
             <div class="meta">
                 <div>
                     <span class="author">{{author}}</span>
@@ -16,7 +16,7 @@
         </div>
         <div class="main">
             <p v-md="contentSegment"></p>
-            <nav><router-link :to='{name: "essay", params: { id }}' tag="p">阅读全文 »</router-link></nav>
+            <nav><router-link :to='{name: "essayTag", params: { id, tagName }}' tag="p">阅读全文 »</router-link></nav>
         </div>
     </article>
 </template>
@@ -46,6 +46,10 @@ export default {
         },
         viewCount: {
             type: Number,
+            required: true
+        },
+        tagName: {
+            type: String,
             required: true
         }
     }

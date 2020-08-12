@@ -5,14 +5,8 @@ const app = new Koa();
 const router = new Router();
 const bodyParser = require("koa-bodyparser");
 const { readFileSync } = require("fs");
+const { allowOrigin, mysqlConfig } = require("./baseConfig");
 
-const mysqlConfig = {
-    connectionLimit : 10,
-    host            : "localhost",
-    user            : 'root',
-    password        : 'root',
-    database        : 'blog'
-};
 const pool = mysql.createPool(mysqlConfig);
 
 async function query(sql){
@@ -29,19 +23,25 @@ async function query(sql){
 }
 
 app.use(async (ctx, next) => {
+    let origin = ctx.request.headers.origin;
     ctx.set({
-        "Access-Control-allow-Headers": "Content-type",
-        "Access-Control-Allow-Origin": "http://192.168.0.107:8080"
-        
+        "Access-Control-allow-Headers": "Content-type"
     });
+    if(allowOrigin.includes(origin)){
+        ctx.set({
+            "Access-Control-allow-Origin": origin
+        });
+    }
     await next();
 })
 
 router.post("/getEssayList", async (ctx, next) => {
     try{
         let {page, pageSize} = ctx.request.body;
-        let result = await query(`SELECT e.id, title, userName AS author, LEFT(content, 100) AS contentSegment, CAST(e.createTime AS UNSIGNED) AS createTime, viewCount FROM essay e, users u WHERE e.authorId = u.id LIMIT ${ (page - 1) * pageSize }, ${ pageSize }`);
-        if(result.length === 0){
+        let result = {};
+        result.list = await query(`SELECT e.id, title, userName AS author, LEFT(content, 100) AS contentSegment, CAST(e.createTime AS UNSIGNED) AS createTime, viewCount FROM essay e, users u WHERE e.authorId = u.id ORDER BY CONVERT(updateTime, UNSIGNED) DESC LIMIT ${ (page - 1) * pageSize }, ${ pageSize }`);
+        result.totalCount = (await query("SELECT COUNT(e.id) as totalCount FROM essay e, users u WHERE e.authorId = u.id"))[0].totalCount;
+        if(result.list.length === 0){
             throw "error";
         }else{
             ctx.body = {
@@ -54,8 +54,7 @@ router.post("/getEssayList", async (ctx, next) => {
     catch(err){
         ctx.body = {
             code: 404,
-            msg: "文章列表获取失败",
-            data: []
+            msg: "文章列表获取失败"
         };
     }
     finally{
@@ -65,31 +64,22 @@ router.post("/getEssayList", async (ctx, next) => {
 
 router.post("/getEssayInfo", async (ctx, next) => {
     try{
-        let { id, tagName } = ctx.request.body;
-        let tagNameVal = `${tagName === "all" ? "" : `WHERE tagName = "${tagName}"`}`;
-        let { essayListLength } = (await query(`SELECT COUNT(id) AS essayListLength FROM essay ${tagNameVal}`))[0];
-        if(essayListLength === 0){
+        let { id } = ctx.request.body;
+        let result = await query(`SELECT e.id, title, userName AS author, content, CAST(e.createTime AS UNSIGNED) AS createTime, viewCount FROM essay e, users u WHERE e.id = ${id} and e.authorId = u.id`);
+        if(result.length === 0){
             throw "error";
         }
-        tagNameVal = `${tagName === "all" ? "" : `tagName = "${tagName}" and`}`;
-        let result = [];
-        if(essayListLength === 1){
-            let essayList = await query(`SELECT e.id, title, userName AS author, content, CAST(e.createTime AS UNSIGNED) AS createTime, viewCount FROM essay e, users u WHERE ${tagNameVal} e.authorId = u.id LIMIT 0, 2`);
-            result.push(...[null, ...essayList, null]);
+        let prevEssay = await query(`select e.id, title from essay e, users u where e.authorId = u.id and convert(updateTime, unsigned) > (select convert(updateTime, unsigned) from essay where id = ${id}) order by convert(updateTime, unsigned) limit 1`);
+        let nextEssay = await query(`select e.id, title from essay e, users u where e.authorId = u.id and convert(updateTime, unsigned) < (select convert(updateTime, unsigned) from essay where id = ${id}) order by convert(updateTime, unsigned) desc limit 1`);
+        if(prevEssay.length === 0){
+            result.unshift(null);
+        }else{
+            result.unshift(...prevEssay);
         }
-        else if(id === 1){
-            let essayList = await query(`SELECT e.id, title, userName AS author, content, CAST(e.createTime AS UNSIGNED) AS createTime, viewCount FROM essay e, users u WHERE ${tagNameVal} e.authorId = u.id LIMIT 0, 2`);
-            result.push(...[null, ...essayList]);
-        }
-        else if(id === essayListLength){
-            let essayList = await query(`SELECT e.id, title, userName AS author, content, CAST(e.createTime AS UNSIGNED) AS createTime, viewCount FROM essay e, users u WHERE ${tagNameVal} e.authorId = u.id LIMIT ${id - 2}, 2`);
-            result.push(...[...essayList, null]);
-        }
-        else if(id < essayListLength && id > 1){
-            result = await query(`SELECT e.id, title, userName AS author, content, CAST(e.createTime AS UNSIGNED) AS createTime, viewCount FROM essay e, users u WHERE ${tagNameVal} e.authorId = u.id LIMIT ${id - 2},3`);
-        }
-        else{
-            throw "error";
+        if(nextEssay.length === 0){
+            result.push(null);
+        }else{
+            result.push(...nextEssay);
         }
         ctx.body = {
             code: 200,
@@ -136,8 +126,10 @@ router.post("/getEssayTags", async (ctx, next) => {
 router.post("/getEssayTagList", async (ctx, next) => {
     try{
         let {page, pageSize, tagName} = ctx.request.body;
-        let result = await query(`SELECT e.id, title, userName AS author, LEFT(content, 100) AS contentSegment, CAST(e.createTime AS UNSIGNED) AS createTime, viewCount FROM essay e, users u WHERE tagName = '${tagName}' and e.authorId = u.id LIMIT ${ (page - 1) * pageSize }, ${ pageSize }`);
-        if(result.length === 0){
+        let result = {};
+        result.list = await query(`SELECT e.id, title, userName AS author, LEFT(content, 100) AS contentSegment, CAST(e.createTime AS UNSIGNED) AS createTime, viewCount, tagName FROM essay e, users u WHERE tagName = '${tagName}' and e.authorId = u.id ORDER BY CONVERT(updateTime, UNSIGNED) DESC LIMIT ${ (page - 1) * pageSize }, ${ pageSize }`);
+        result.totalCount = (await query(`SELECT COUNT(e.id) as totalCount FROM essay e, users u WHERE tagName = '${tagName}' and e.authorId = u.id`))[0].totalCount;
+        if(result.list.length === 0){
             throw "error";
         }
         ctx.body = {
@@ -149,7 +141,43 @@ router.post("/getEssayTagList", async (ctx, next) => {
     catch(err){
         ctx.body = {
             code: 404,
-            msg: "文章列表获取失败",
+            msg: "文章列表获取失败"
+        };
+    }
+    finally{
+        await next();
+    }
+});
+
+router.post("/getEssayTagInfo", async (ctx, next) => {
+    try{
+        let { id, tagName } = ctx.request.body;
+        let result = await query(`SELECT e.id, title, userName AS author, content, CAST(e.createTime AS UNSIGNED) AS createTime, viewCount FROM essay e, users u WHERE tagName = "${tagName}" and e.id = ${id} and e.authorId = u.id`);
+        if(result.length === 0){
+            throw "error";
+        }
+        let prevEssay = await query(`select e.id, title from essay e, users u where tagName = "${tagName}" and e.authorId = u.id and convert(updateTime, unsigned) > (select convert(updateTime, unsigned) from essay where id = ${id}) order by convert(updateTime, unsigned) limit 1`);
+        let nextEssay = await query(`select e.id, title from essay e, users u where tagName = "${tagName}" and e.authorId = u.id and convert(updateTime, unsigned) < (select convert(updateTime, unsigned) from essay where id = ${id}) order by convert(updateTime, unsigned) desc limit 1`);
+        if(prevEssay.length === 0){
+            result.unshift(null);
+        }else{
+            result.unshift(...prevEssay);
+        }
+        if(nextEssay.length === 0){
+            result.push(null);
+        }else{
+            result.push(...nextEssay);
+        }
+        ctx.body = {
+            code: 200,
+            msg: "文章获取成功",
+            data: result
+        };
+    }
+    catch(err){
+        ctx.body = {
+            code: 404,
+            msg: "文章获取失败",
             data: []
         };
     }
@@ -161,16 +189,19 @@ router.post("/getEssayTagList", async (ctx, next) => {
 router.post("/getEssayArchives", async (ctx, next) => {
     try{
         let archives = [];
-        let essayList = await query(`SELECT id, title, CONVERT(updateTime, UNSIGNED) as updateTime FROM essay ORDER BY id`);
+        let essayList = await query(`SELECT id, title, CONVERT(updateTime, UNSIGNED) as updateTime FROM essay ORDER BY CONVERT(updateTime, UNSIGNED) DESC`);
         if(essayList.length === 0){
             throw "error";
         }
         essayList.forEach(it => {
-            let year = new Date(it.updateTime).getFullYear();
-            let month = new Date(it.updateTime).getMonth() + 1;
-            let time = `${year}年${month}月`;
-            let existId = archives.findIndex(it => it.time === time);
-            (existId === -1) ? archives.push({time, content: [it]}) : archives[existId].content.push(it);
+            let essayListYear = new Date(it.updateTime).getFullYear();
+            let essayListMonth = new Date(it.updateTime).getMonth() + 1;
+            let existId = archives.findIndex(it => {
+                year = new Date(it.time).getFullYear();
+                month = new Date(it.time).getMonth() + 1;
+                return year === essayListYear && month === essayListMonth;
+            });
+            (existId === -1) ? archives.push({time: it.updateTime, content: [it]}) : archives[existId].content.push(it);
         });
         ctx.body = {
             code: 200,
@@ -243,6 +274,7 @@ router.post("/getFriendlyLinks", async (ctx, next) => {
         await next();
     }
 });
+
 router.post("/addViewCount", async (ctx, next) => {
     try{
         let { id, viewCount } = ctx.request.body;
@@ -256,6 +288,129 @@ router.post("/addViewCount", async (ctx, next) => {
         ctx.body = {
             code: 404,
             msg: "阅读次数修改失败"
+        };
+    }
+    finally{
+        await next();
+    }
+});
+
+router.post("/getSearchList", async (ctx, next) => {
+    try{
+        let {page, pageSize, keywords} = ctx.request.body;
+        let search = "";
+        let result = {};
+        keywords.trim().split(/\s+/).forEach(keyword => {
+            search += `(title LIKE "%${keyword}%" OR content LIKE "%${keyword}%" OR userName LIKE "%${keyword}%") and `;
+        });
+        result.list = await query(`SELECT e.id, title, userName AS author, LEFT(content, 100) AS contentSegment, CAST(e.createTime AS UNSIGNED) AS createTime, viewCount FROM essay e, users u WHERE ${search}  e.authorId = u.id ORDER BY CONVERT(updateTime, UNSIGNED) DESC LIMIT ${ (page - 1) * pageSize }, ${ pageSize }`);
+        result.totalCount = (await query(`SELECT COUNT(e.id) as totalCount FROM essay e, users u WHERE ${search}  e.authorId = u.id`))[0].totalCount;
+        if(result.list.length === 0){
+            throw "error";
+        }
+        ctx.body = {
+            code: 200,
+            msg: "查询文章内容成功",
+            data: result
+        };
+    }
+    catch(err){
+        ctx.body = {
+            code: 404,
+            msg: "查询文章内容失败"
+        };
+    }
+    finally{
+        await next();
+    }
+});
+
+router.post("/updateHotKeywords", async (ctx, next) => {
+    try{
+        let {keywords} = ctx.request.body;
+        for(let keyword of keywords.trim().split(/\s+/)){
+            let result = await query(`SELECT id, searchCount FROM hotKeywords WHERE keyword = "${keyword}"`);
+            if(result.length !== 0){
+                ([result] = result);
+                await query(`UPDATE hotKeywords SET searchCount = ${result.searchCount + 1} WHERE id = ${result.id}`);
+            }else{
+                await query(`INSERT INTO hotKeywords(keyword) VALUES ("${keyword}")`);
+            }
+        }
+        ctx.body = {
+            code: 200,
+            msg: "更新热搜词成功"
+        };
+    }
+    catch(err){
+        ctx.body = {
+            code: 404,
+            msg: "更新热搜词失败"
+        };
+    }
+    finally{
+        await next();
+    }
+});
+
+router.post("/getHotKeywords", async (ctx, next) => {
+    try{
+        let {count} = ctx.request.body;
+        let result = await query(`SELECT keyword FROM hotKeywords ORDER BY searchCount DESC LIMIT ${count}`);
+        if(result.length === 0){
+            throw "error";
+        }
+        ctx.body = {
+            code: 200,
+            msg: "获取热搜词成功",
+            data: result
+        };
+    }
+    catch(err){
+        ctx.body = {
+            code: 404,
+            msg: "获取热搜词失败"
+        };
+    }
+    finally{
+        await next();
+    }
+});
+
+router.post("/getsearchEssayInfo", async (ctx, next) => {
+    try{
+        let { id, keywords } = ctx.request.body;
+        let search = "";
+        keywords.trim().split(/\s+/).forEach(keyword => {
+            search += `(title LIKE "%${keyword}%" OR content LIKE "%${keyword}%" OR userName LIKE "%${keyword}%") and`;
+        });
+        let result = await query(`SELECT e.id, title, userName AS author, content, CAST(e.createTime AS UNSIGNED) AS createTime, viewCount FROM essay e, users u WHERE e.id = ${id} and e.authorId = u.id and ${search.slice(0, -4)}`);
+        if(result.length === 0){
+            throw "error";
+        }
+        let prevEssay = await query(`select e.id, title from essay e, users u where e.authorId = u.id and ${search} convert(updateTime, unsigned) > (select convert(updateTime, unsigned) from essay where id = ${id}) order by convert(updateTime, unsigned) limit 1`);
+        let nextEssay = await query(`select e.id, title from essay e, users u where e.authorId = u.id and ${search} convert(updateTime, unsigned) < (select convert(updateTime, unsigned) from essay where id = ${id}) order by convert(updateTime, unsigned) desc limit 1`);
+        if(prevEssay.length === 0){
+            result.unshift(null);
+        }else{
+            result.unshift(...prevEssay);
+        }
+        if(nextEssay.length === 0){
+            result.push(null);
+        }else{
+            result.push(...nextEssay);
+        }
+        ctx.body = {
+            code: 200,
+            msg: "文章获取成功",
+            data: result
+        };
+    }
+    catch(err){
+        ctx.body = {
+            code: 404,
+            msg: "文章获取失败",
+            data: []
         };
     }
     finally{
