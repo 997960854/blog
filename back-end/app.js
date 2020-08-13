@@ -39,7 +39,7 @@ router.post("/getEssayList", async (ctx, next) => {
     try{
         let {page, pageSize} = ctx.request.body;
         let result = {};
-        result.list = await query(`SELECT e.id, title, userName AS author, LEFT(content, 100) AS contentSegment, CAST(e.createTime AS UNSIGNED) AS createTime, viewCount FROM essay e, users u WHERE e.authorId = u.id ORDER BY CONVERT(updateTime, UNSIGNED) DESC LIMIT ${ (page - 1) * pageSize }, ${ pageSize }`);
+        result.list = await query(`SELECT e.id, title, userName AS author, LEFT(content, 100) AS contentSegment, CAST(e.updateTime AS UNSIGNED) AS updateTime, viewCount FROM essay e, users u WHERE e.authorId = u.id ORDER BY CONVERT(updateTime, UNSIGNED) DESC LIMIT ${ (page - 1) * pageSize }, ${ pageSize }`);
         result.totalCount = (await query("SELECT COUNT(e.id) as totalCount FROM essay e, users u WHERE e.authorId = u.id"))[0].totalCount;
         if(result.list.length === 0){
             throw "error";
@@ -127,7 +127,7 @@ router.post("/getEssayTagList", async (ctx, next) => {
     try{
         let {page, pageSize, tagName} = ctx.request.body;
         let result = {};
-        result.list = await query(`SELECT e.id, title, userName AS author, LEFT(content, 100) AS contentSegment, CAST(e.createTime AS UNSIGNED) AS createTime, viewCount, tagName FROM essay e, users u WHERE tagName = '${tagName}' and e.authorId = u.id ORDER BY CONVERT(updateTime, UNSIGNED) DESC LIMIT ${ (page - 1) * pageSize }, ${ pageSize }`);
+        result.list = await query(`SELECT e.id, title, userName AS author, LEFT(content, 100) AS contentSegment, CAST(e.updateTime AS UNSIGNED) AS updateTime, viewCount, tagName FROM essay e, users u WHERE tagName = '${tagName}' and e.authorId = u.id ORDER BY CONVERT(updateTime, UNSIGNED) DESC LIMIT ${ (page - 1) * pageSize }, ${ pageSize }`);
         result.totalCount = (await query(`SELECT COUNT(e.id) as totalCount FROM essay e, users u WHERE tagName = '${tagName}' and e.authorId = u.id`))[0].totalCount;
         if(result.list.length === 0){
             throw "error";
@@ -244,7 +244,7 @@ router.post("/getIntro", async (ctx, next) => {
 
 router.post("/getFriendlyLinks", async (ctx, next) => {
     try{
-        let links = await query("select tagName, name, path from friendlyLinks");
+        let links = await query("SELECT tagName, name, path FROM friendlyLinks ORDER BY id DESC");
         let result = [];
         if(links.length === 0){
             throw "error";
@@ -303,7 +303,7 @@ router.post("/getSearchList", async (ctx, next) => {
         keywords.trim().split(/\s+/).forEach(keyword => {
             search += `(title LIKE "%${keyword}%" OR content LIKE "%${keyword}%" OR userName LIKE "%${keyword}%") and `;
         });
-        result.list = await query(`SELECT e.id, title, userName AS author, LEFT(content, 100) AS contentSegment, CAST(e.createTime AS UNSIGNED) AS createTime, viewCount FROM essay e, users u WHERE ${search}  e.authorId = u.id ORDER BY CONVERT(updateTime, UNSIGNED) DESC LIMIT ${ (page - 1) * pageSize }, ${ pageSize }`);
+        result.list = await query(`SELECT e.id, title, LEFT(content, 100) AS contentSegment FROM essay e, users u WHERE ${search}  e.authorId = u.id ORDER BY CONVERT(updateTime, UNSIGNED) DESC LIMIT ${ (page - 1) * pageSize }, ${ pageSize }`);
         result.totalCount = (await query(`SELECT COUNT(e.id) as totalCount FROM essay e, users u WHERE ${search}  e.authorId = u.id`))[0].totalCount;
         if(result.list.length === 0){
             throw "error";

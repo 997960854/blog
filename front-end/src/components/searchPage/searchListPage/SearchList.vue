@@ -24,18 +24,6 @@ export default {
             type: String,
             required: true
         },
-        author:{
-            type: String,
-            required: true
-        },
-        createTime: {
-            type: Number,
-            required: true
-        },
-        viewCount: {
-            type: Number,
-            required: true
-        },
         keywords: {
             type: String,
             required: true

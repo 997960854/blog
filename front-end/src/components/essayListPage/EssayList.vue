@@ -6,7 +6,7 @@
                 <div>
                     <span class="author">{{author}}</span>
                     <span>发布于</span>
-                    <span class="date">{{createTime| timeFormat}}</span>
+                    <span class="date">{{updateTime| timeFormat}}</span>
                 </div>
                 <div>
                     <span class="view">{{viewCount| countFormat}}</span>
@@ -40,7 +40,7 @@ export default {
             type: String,
             required: true
         },
-        createTime: {
+        updateTime: {
             type: Number,
             required: true
         },
