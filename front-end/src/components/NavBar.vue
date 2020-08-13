@@ -36,7 +36,7 @@ export default {
                 {iconClass: "icon-youqinglianjie", name: "友链", path: "/friendlyLink", title: "友链"},
             ],
             otherLinks: {
-                outside: [{iconClass: "icon-github", path: "http://www.baidu.com", title: "首页"}],
+                outside: [{iconClass: "icon-github", path: "https://github.com/997960854", title: "首页"}],
                 inside: [{iconClass: "icon-chazhao", path: "/search", title: "搜索文章"}]
             },
         }
